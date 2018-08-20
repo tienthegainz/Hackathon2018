@@ -35,12 +35,12 @@ with open('traffic_measurement.csv', 'w') as f:
         'Vehicle Type/Size, Vehicle Color, Vehicle Movement Direction, Vehicle Speed (km/h)'
     writer.writerows([csv_line.split(',')])
 
-if tf.__version__ < '1.4.0':
+"""if tf.__version__ < '1.4.0':
     raise ImportError('Please upgrade your tensorflow installation to v1.4.* or later!'
-                      )
+                      )"""
 
 # input video
-cap = cv2.VideoCapture('sub-1504614469486.mp4')
+cap = cv2.VideoCapture('video_giao_thong.mp4')
 
 # Variables
 total_passed_vehicle = 0  # using it to count vehicles
@@ -239,4 +239,4 @@ def object_detection_function():
             cv2.destroyAllWindows()
 
 
-object_detection_function()		
+object_detection_function()
