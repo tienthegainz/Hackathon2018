@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "85400273816",
+    "firebase_url": "https://avaandroid-7275b.firebaseio.com",
+    "project_id": "avaandroid-7275b",
+    "storage_bucket": "avaandroid-7275b.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85400273816:android:9b5cdb45061e0089",
+        "android_client_info": {
+          "package_name": "com.example.hanh.ava_android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "85400273816-r3cjcfhs97fo5np8iv9mm7k4r6j38mi2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.hanh.ava_android",
+            "certificate_hash": "a2f2bc0117f171f5719a66250dd90a5a7a5e6126"
+          }
+        },
+        {
+          "client_id": "85400273816-mud5qr55er4fcmroh0v43666snnniv2g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAeQkm3NzgtvVqxczlQRFl-AtPISm62mXg"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "85400273816-mud5qr55er4fcmroh0v43666snnniv2g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
