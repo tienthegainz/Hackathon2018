@@ -500,9 +500,9 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
           color=color
       )
 
-    display_str_list=box_to_display_str_map[box]
+    display_str_list = box_to_display_str_map[box]
     # we are interested just vehicles (i.e. cars and trucks)
-    if (("car" in display_str_list[0]) or ("truck" in display_str_list[0]) or ("bus" in display_str_list[0]) or ("person" in display_str_list[0]) or ("bicycle" in display_str_list[0])or ("motorcycle" in display_str_list[0])):
+    if (("car" in display_str_list[0]) or ("truck" in display_str_list[0]) or ("bus" in display_str_list[0]) or ("person" in display_str_list[0]) or ("bicycle" in display_str_list[0]) or ("motorcycle" in display_str_list[0])):
             is_vehicle_detected, csv_line, update_csv = draw_bounding_box_on_image_array(current_frame_number,
                 image,
                 ymin,
@@ -513,7 +513,8 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
                 thickness=line_thickness,
                 display_str_list=box_to_display_str_map[box],
                 use_normalized_coordinates=use_normalized_coordinates)
-
+            str1, str2 = display_str_list[0].split(":")
+            # print("obj", str1)
             if keypoints is not None:
               draw_keypoints_on_image_array(
                   image,
@@ -530,7 +531,7 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
       class_name = "truck"
     csv_line_util = class_name + "," + csv_line
 
-  return counter, csv_line_util
+  return counter, csv_line_util, str1
 
 
 def add_cdf_image_summary(values, name):

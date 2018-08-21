@@ -43,7 +43,6 @@ with open('traffic_measurement.csv', 'w') as f:
 cap = cv2.VideoCapture('video_giao_thong.mp4')
 
 # Variables
-total_passed_vehicle = 0  # using it to count vehicles
 NUMBER_OF_FRAME = 20  # standard number frames before refreshing
 LINE_DEVIATION = 5
 
@@ -91,11 +90,14 @@ def load_image_into_numpy_array(image):
 # Detection
 def object_detection_function():
     #var init
-    total_passed_vehicle = 0
+    total_passed_bus = 0  # using it to count bus and truck
+    total_passed_car = 0  # using it to count car
+    total_passed_bike = 0  # using it to count bike
     speed = 'waiting...'
     direction = 'waiting...'
     size = 'waiting...'
     color = 'waiting...'
+    obj_name = 'unknown...'
     #var for counting vehicle
     # num_vehicle_pass = 0
     frame_count = 0
@@ -123,11 +125,6 @@ def object_detection_function():
                     break
 
                 input_frame = frame
-                if frame_count == NUMBER_OF_FRAME:
-                    # cong thuc tinh travel flow
-                    print("Traffic Flow : ", total_passed_vehicle*60/(NUMBER_OF_FRAME/5), "vch/h")
-                    total_passed_vehicle = 0
-                frame_count += 1
                 # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
                 image_np_expanded = np.expand_dims(input_frame, axis=0)
 
@@ -138,7 +135,7 @@ def object_detection_function():
                              feed_dict={image_tensor: image_np_expanded})
 
                 # Visualization of the results of a detection.
-                (counter, csv_line) = \
+                (counter, csv_line, obj_name) = \
                     vis_util.visualize_boxes_and_labels_on_image_array(
                     cap.get(1),
                     input_frame,
@@ -150,13 +147,37 @@ def object_detection_function():
                     line_thickness=4,
                     )
 
-                total_passed_vehicle = total_passed_vehicle + counter
+                frame_count += 1
+                if counter == 1:
+                    if "person" in obj_name or "bicycle" in obj_name or "motorcycle" in obj_name:
+                        total_passed_bike += 1
+                    elif "car" in obj_name:
+                        total_passed_car += 1
+                    elif "truck" in obj_name or "bus" in obj_name:
+                        total_passed_bus += 1
+                if frame_count == NUMBER_OF_FRAME:
+                    # cong thuc tinh travel flow
+                    print("Bike: ", total_passed_bike)
+                    print("Car: ", total_passed_car)
+                    print("Truck and Bus: ", total_passed_bus)
+                    print(
+                    "Traffic Flow: ",
+                    total_passed_bike, "*0.3+",
+                    total_passed_car, "+",
+                    total_passed_bus, "*2",
+                    "/5*60 = ",
+                    (total_passed_bike*0.3+total_passed_car+total_passed_bus*2)*60/5, "vch/h"
+                    )
+                    total_passed_bus = 0
+                    total_passed_car = 0
+                    total_passed_bike = 0
+                    frame_count = 0
 
                 # insert information text to video frame
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 cv2.putText(
                     input_frame,
-                    'Detected Vehicles: ' + str(total_passed_vehicle),
+                    'Detected Car: ' + str(total_passed_car),
                     (10, 35),
                     font,
                     0.8,
@@ -164,7 +185,26 @@ def object_detection_function():
                     2,
                     cv2.FONT_HERSHEY_SIMPLEX,
                     )
-
+                cv2.putText(
+                    input_frame,
+                    'Detected Bike: ' + str(total_passed_bike),
+                    (10, 55),
+                    font,
+                    0.8,
+                    (0, 0xFF, 0xFF),
+                    2,
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    )
+                cv2.putText(
+                    input_frame,
+                    'Detected Truck or Bus: ' + str(total_passed_bus),
+                    (10, 75),
+                    font,
+                    0.8,
+                    (0, 0xFF, 0xFF),
+                    2,
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    )
                 # when the vehicle passed over line and counted, make the color of ROI line green
                 if counter == 1:
                     cv2.line(input_frame, (0, 200), (3000, 200), (0, 0xFF, 0), 5)
