@@ -44,6 +44,8 @@ cap = cv2.VideoCapture('video_giao_thong.mp4')
 
 # Variables
 total_passed_vehicle = 0  # using it to count vehicles
+NUMBER_OF_FRAME = 20  # standard number frames before refreshing
+LINE_DEVIATION = 5
 
 # By default I use an "SSD with Mobilenet" model here. See the detection model zoo (https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md) for a list of other models that can be run out-of-the-box with varying speeds and accuracies.
 # What model to download.
@@ -88,11 +90,15 @@ def load_image_into_numpy_array(image):
 
 # Detection
 def object_detection_function():
+    #var init
     total_passed_vehicle = 0
     speed = 'waiting...'
     direction = 'waiting...'
     size = 'waiting...'
     color = 'waiting...'
+    #var for counting vehicle
+    # num_vehicle_pass = 0
+    frame_count = 0
     with detection_graph.as_default():
         with tf.Session(graph=detection_graph) as sess:
 
@@ -117,7 +123,11 @@ def object_detection_function():
                     break
 
                 input_frame = frame
-
+                if frame_count == NUMBER_OF_FRAME:
+                    # cong thuc tinh travel flow
+                    print("Traffic Flow : ", total_passed_vehicle*60/(NUMBER_OF_FRAME/5), "vch/h")
+                    total_passed_vehicle = 0
+                frame_count += 1
                 # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
                 image_np_expanded = np.expand_dims(input_frame, axis=0)
 
@@ -157,73 +167,21 @@ def object_detection_function():
 
                 # when the vehicle passed over line and counted, make the color of ROI line green
                 if counter == 1:
-                    cv2.line(input_frame, (0, 200), (640, 200), (0, 0xFF, 0), 5)
+                    cv2.line(input_frame, (0, 200), (3000, 200), (0, 0xFF, 0), 5)
                 else:
-                    cv2.line(input_frame, (0, 200), (640, 200), (0, 0, 0xFF), 5)
+                    cv2.line(input_frame, (0, 200), (3000, 200), (0, 0, 0xFF), 5)
 
                 # insert information text to video frame
-                cv2.rectangle(input_frame, (10, 275), (230, 337), (180, 132, 109), -1)
                 cv2.putText(
                     input_frame,
                     'ROI Line',
-                    (545, 190),
+                    (545, 290),
                     font,
                     0.6,
                     (0, 0, 0xFF),
                     2,
                     cv2.LINE_AA,
                     )
-                cv2.putText(
-                    input_frame,
-                    'LAST PASSED VEHICLE INFO',
-                    (11, 290),
-                    font,
-                    0.5,
-                    (0xFF, 0xFF, 0xFF),
-                    1,
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    )
-                cv2.putText(
-                    input_frame,
-                    '-Movement Direction: ' + direction,
-                    (14, 302),
-                    font,
-                    0.4,
-                    (0xFF, 0xFF, 0xFF),
-                    1,
-                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                    )
-                cv2.putText(
-                    input_frame,
-                    '-Speed(km/h): ' + speed,
-                    (14, 312),
-                    font,
-                    0.4,
-                    (0xFF, 0xFF, 0xFF),
-                    1,
-                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                    )
-                cv2.putText(
-                    input_frame,
-                    '-Color: ' + color,
-                    (14, 322),
-                    font,
-                    0.4,
-                    (0xFF, 0xFF, 0xFF),
-                    1,
-                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                    )
-                cv2.putText(
-                    input_frame,
-                    '-Vehicle Size/Type: ' + size,
-                    (14, 332),
-                    font,
-                    0.4,
-                    (0xFF, 0xFF, 0xFF),
-                    1,
-                    cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                    )
-
                 cv2.imshow('vehicle detection', input_frame)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):

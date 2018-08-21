@@ -8,9 +8,10 @@
 from utils.image_utils import image_saver
 
 is_vehicle_detected = [0]
-current_frame_number_list = [0]
+# current_frame_number_list = [0]
 bottom_position_of_detected_vehicle = [0]
-
+top_position_of_detected_vehicle = [0]
+LINE_DEVIATION = 5
 
 def predict_speed(
     top,
@@ -23,11 +24,10 @@ def predict_speed(
     ):
     speed = 'n.a.'  # means not available, it is just initialization
     direction = 'n.a.'  # means not available, it is just initialization
-    scale_constant = 1  # manual scaling because we did not performed camera calibration
+    # scale_constant = 1  # manual scaling because we did not performed camera calibration
     isInROI = True  # is the object that is inside Region Of Interest
     update_csv = False
-
-    if bottom < 250:
+    """if bottom < 250:
         scale_constant = 1  # scale_constant is used for manual scaling because we did not performed camera calibration
     elif bottom > 250 and bottom < 320:
         scale_constant = 2  # scale_constant is used for manual scaling because we did not performed camera calibration
@@ -37,7 +37,7 @@ def predict_speed(
     if len(bottom_position_of_detected_vehicle) != 0 and bottom \
         - bottom_position_of_detected_vehicle[0] > 0 and 205 \
         < bottom_position_of_detected_vehicle[0] \
-        and bottom_position_of_detected_vehicle[0] < 210 \
+        and bottom_position_of_detected_vehicle[0] < 250 \
         and roi_position < bottom:
         is_vehicle_detected.insert(0, 1)
         update_csv = True
@@ -45,7 +45,7 @@ def predict_speed(
 
     # for debugging
     # print("bottom_position_of_detected_vehicle[0]: " + str(bottom_position_of_detected_vehicle[0]))
-    # print("bottom: " + str(bottom))
+    print("bottom: " + str(bottom))
     if bottom > bottom_position_of_detected_vehicle[0]:
         direction = 'down'
     else:
@@ -60,6 +60,20 @@ def predict_speed(
             speed = scale_real_length / scale_real_time_passed / scale_constant  # performing manual scaling because we have not performed camera calibration
             speed = speed / 6 * 40  # use reference constant to get vehicle speed prediction in kilometer unit
             current_frame_number_list.insert(0, current_frame_number)
-            bottom_position_of_detected_vehicle.insert(0, bottom)
-
+            bottom_position_of_detected_vehicle.insert(0, bottom)"""
+    center_pos = (top+bottom)/2
+    # print(center_pos)
+    if center_pos >= (roi_position - LINE_DEVIATION) \
+        and center_pos <= (roi_position + LINE_DEVIATION) \
+        and len(bottom_position_of_detected_vehicle) != 0 \
+        and len(top_position_of_detected_vehicle) != 0 :
+        if (bottom - top) > ((bottom_position_of_detected_vehicle[0] - top_position_of_detected_vehicle[0]) + LINE_DEVIATION) \
+            or (bottom - top) < ((bottom_position_of_detected_vehicle[0] - top_position_of_detected_vehicle[0]) + LINE_DEVIATION) :
+            is_vehicle_detected.insert(0, 1)
+            # print("Confirm")
+            update_csv = True
+            image_saver.save_image(crop_img)  # save detected vehicle image
+    # save these var for not committing repeated vehicle
+    bottom_position_of_detected_vehicle.insert(0, bottom)
+    top_position_of_detected_vehicle.insert(0, top)
     return (direction, speed, is_vehicle_detected, update_csv)

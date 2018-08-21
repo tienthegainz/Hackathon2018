@@ -178,9 +178,9 @@ def draw_bounding_box_on_image(current_frame_number,image,
   image_temp = numpy.array(image)
   detected_vehicle_image = image_temp[int(top):int(bottom), int(left):int(right)]
 
-  if(bottom > ROI_POSITION): # if the vehicle get in ROI area, vehicle predicted_speed predicted_color algorithms are called - 200 is an arbitrary value, for my case it looks very well to set position of ROI line at y pixel 200
+  # if it pass the line
+  if(bottom > ROI_POSITION): # if the vehicle pass ROI line, vehicle predicted_count it predicted_color algorithms are called - 200 is an arbitrary value, for my case it looks very well to set position of ROI line at y pixel 200
         predicted_direction, predicted_speed,  is_vehicle_detected, update_csv = speed_prediction.predict_speed(top, bottom, right, left, current_frame_number, detected_vehicle_image, ROI_POSITION)
-
   predicted_color = color_recognition_api.color_recognition(detected_vehicle_image)
 
   try:
