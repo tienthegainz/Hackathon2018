@@ -458,6 +458,7 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
   csv_line_util = "not_available"
   counter = 0
   is_vehicle_detected = []
+  density = [0, 0, 0]  # with bike,car,bus in this order
   box_to_display_str_map = collections.defaultdict(list)
   box_to_color_map = collections.defaultdict(str)
   box_to_instance_masks_map = {}
@@ -484,6 +485,13 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
           display_str = 'score: {}%'.format(int(100 * scores[i]))
 
         box_to_display_str_map[box].append(display_str)
+        # print("Test: ", display_str)
+        if ("person" in display_str) or ("bicycle" in display_str) or("motorcycle" in display_str):
+            density[0] += 1
+        elif ("car" in display_str):
+            density[1] += 1
+        elif ("truck" in display_str) or ("bus" in display_str):
+            density[2] += 1
         if agnostic_mode:
           box_to_color_map[box] = 'DarkOrange'
         else:
@@ -531,7 +539,7 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
       class_name = "truck"
     csv_line_util = class_name + "," + csv_line
 
-  return counter, csv_line_util, str1
+  return counter, csv_line_util, str1, density
 
 
 def add_cdf_image_summary(values, name):

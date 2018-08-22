@@ -43,7 +43,7 @@ with open('traffic_measurement.csv', 'w') as f:
 cap = cv2.VideoCapture('video_giao_thong.mp4')
 
 # Variables
-NUMBER_OF_FRAME = 20  # standard number frames before refreshing
+NUMBER_OF_FRAME = 300  # standard number frames before refreshing 5 min
 LINE_DEVIATION = 5
 
 # By default I use an "SSD with Mobilenet" model here. See the detection model zoo (https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md) for a list of other models that can be run out-of-the-box with varying speeds and accuracies.
@@ -89,18 +89,19 @@ def load_image_into_numpy_array(image):
 
 # Detection
 def object_detection_function():
-    #var init
+    # var init
+    # var for counting vehicle
     total_passed_bus = 0  # using it to count bus and truck
     total_passed_car = 0  # using it to count car
     total_passed_bike = 0  # using it to count bike
-    speed = 'waiting...'
-    direction = 'waiting...'
+    density = [0, 0, 0]  # use it for density
+    tmp_density = [0, 0, 0]  # to compare with density
+
     size = 'waiting...'
     color = 'waiting...'
     obj_name = 'unknown...'
-    #var for counting vehicle
-    # num_vehicle_pass = 0
     frame_count = 0
+
     with detection_graph.as_default():
         with tf.Session(graph=detection_graph) as sess:
 
@@ -135,7 +136,7 @@ def object_detection_function():
                              feed_dict={image_tensor: image_np_expanded})
 
                 # Visualization of the results of a detection.
-                (counter, csv_line, obj_name) = \
+                (counter, csv_line, obj_name, density) = \
                     vis_util.visualize_boxes_and_labels_on_image_array(
                     cap.get(1),
                     input_frame,
@@ -146,7 +147,9 @@ def object_detection_function():
                     use_normalized_coordinates=True,
                     line_thickness=4,
                     )
-
+                if (tmp_density[0]*0.3+tmp_density[1]+tmp_density[2]*2) > (density[0]*0.3+density[1]+density[2]*2):
+                    density = tmp_density
+                tmp_density = [0, 0, 0]
                 frame_count += 1
                 if counter == 1:
                     if "person" in obj_name or "bicycle" in obj_name or "motorcycle" in obj_name:
@@ -157,21 +160,25 @@ def object_detection_function():
                         total_passed_bus += 1
                 if frame_count == NUMBER_OF_FRAME:
                     # cong thuc tinh travel flow
+                    tf = (total_passed_bike*0.3+total_passed_car+total_passed_bus*2)*3600/(NUMBER_OF_FRAME/4)
+                    fd = (density[0]*0.3+density[1]+density[2]*2)*1000/5
                     print("Bike: ", total_passed_bike)
                     print("Car: ", total_passed_car)
                     print("Truck and Bus: ", total_passed_bus)
                     print(
                     "Traffic Flow: ",
-                    total_passed_bike, "*0.3+",
-                    total_passed_car, "+",
-                    total_passed_bus, "*2",
-                    "/5*60 = ",
-                    (total_passed_bike*0.3+total_passed_car+total_passed_bus*2)*60/5, "vch/h"
+                    tf,
+                    "vch/h"
                     )
+                    print("Traffic density: ",
+                    td,
+                    "vch/km (assuming that this is 5m video)")
+                    print("Travel speed: ",tf/td," km/h\n")
                     total_passed_bus = 0
                     total_passed_car = 0
                     total_passed_bike = 0
                     frame_count = 0
+                    density = [0, 0, 0]
 
                 # insert information text to video frame
                 font = cv2.FONT_HERSHEY_SIMPLEX

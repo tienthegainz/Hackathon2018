@@ -1,3 +1,8 @@
 Xe may, xe dap: 4,8m2
 Oto: 18m2
 Xe bus, xe tai: 36m2
+ML tính toán luồng giao thông, mật độ giao thông, và từ đó suy ra vận tốc di chuyển.
+Gửi về sever data gồm những cái trên.
+Traffic flow: so xe may*0.3 + so oto + so xe bus*2/ thoi gian
+Traffic density: so xe may*0.3 + so oto + so xe bus*2(chi tinh tren 1 frame)/do dai duong
+Toc do: TF/TD
