@@ -28,16 +28,6 @@ from PIL import Image
 from utils import label_map_util
 from utils import visualization_utils as vis_util
 
-# initialize .csv
-with open('traffic_measurement.csv', 'w') as f:
-    writer = csv.writer(f)
-    csv_line = \
-        'Vehicle Type/Size, Vehicle Color, Vehicle Movement Direction, Vehicle Speed (km/h)'
-    writer.writerows([csv_line.split(',')])
-
-"""if tf.__version__ < '1.4.0':
-    raise ImportError('Please upgrade your tensorflow installation to v1.4.* or later!'
-                      )"""
 
 # input video
 cap = cv2.VideoCapture('video_giao_thong.mp4')
@@ -136,7 +126,7 @@ def object_detection_function():
                              feed_dict={image_tensor: image_np_expanded})
 
                 # Visualization of the results of a detection.
-                (counter, csv_line, obj_name, density) = \
+                (counter, obj_name, density) = \
                     vis_util.visualize_boxes_and_labels_on_image_array(
                     cap.get(1),
                     input_frame,
@@ -160,20 +150,21 @@ def object_detection_function():
                         total_passed_bus += 1
                 if frame_count == NUMBER_OF_FRAME:
                     # cong thuc tinh travel flow
-                    tf = (total_passed_bike*0.3+total_passed_car+total_passed_bus*2)*3600/(NUMBER_OF_FRAME/4)
-                    fd = (density[0]*0.3+density[1]+density[2]*2)*1000/5
+                    trf = (total_passed_bike*0.3+total_passed_car+total_passed_bus*2)*3600/(NUMBER_OF_FRAME/25)
+                    trd = (density[0]*0.3+density[1]+density[2]*2)*1000/50
                     print("Bike: ", total_passed_bike)
                     print("Car: ", total_passed_car)
                     print("Truck and Bus: ", total_passed_bus)
                     print(
                     "Traffic Flow: ",
-                    tf,
+                    trf,
                     "vch/h"
                     )
                     print("Traffic density: ",
-                    td,
-                    "vch/km (assuming that this is 5m video)")
-                    print("Travel speed: ",tf/td," km/h\n")
+                    trd,
+                    "vch/km (assuming that this is 50m video)")
+                    print("Travel speed: ",trf/trd," km/h\n")
+                    # HAY DAT FUNCTION GUI LEN SEVER VAO DAY !!!!!
                     total_passed_bus = 0
                     total_passed_car = 0
                     total_passed_bike = 0
@@ -234,12 +225,6 @@ def object_detection_function():
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
-                if csv_line != 'not_available':
-                    with open('traffic_measurement.csv', 'a') as f:
-                        writer = csv.writer(f)
-                        (size, color, direction, speed) = \
-                            csv_line.split(',')
-                        writer.writerows([csv_line.split(',')])
             cap.release()
             cv2.destroyAllWindows()
 

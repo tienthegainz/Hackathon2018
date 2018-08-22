@@ -123,11 +123,11 @@ def draw_bounding_box_on_image_array(current_frame_number, image,
       coordinates as absolute.
   """
   image_pil = Image.fromarray(np.uint8(image)).convert('RGB')
-  is_vehicle_detected, csv_line, update_csv = draw_bounding_box_on_image(current_frame_number,image_pil, ymin, xmin, ymax, xmax, color,
+  is_vehicle_detected = draw_bounding_box_on_image(current_frame_number,image_pil, ymin, xmin, ymax, xmax, color,
                              thickness, display_str_list,
                              use_normalized_coordinates)
   np.copyto(image, np.array(image_pil))
-  return is_vehicle_detected, csv_line, update_csv
+  return is_vehicle_detected
 
 def draw_bounding_box_on_image(current_frame_number,image,
                                ymin,
@@ -159,8 +159,6 @@ def draw_bounding_box_on_image(current_frame_number,image,
       ymin, xmin, ymax, xmax as relative to the image.  Otherwise treat
       coordinates as absolute.
   """
-  csv_line = "" # to create new csv line consists of vehicle type, predicted_speed, color and predicted_direction
-  update_csv = False # update csv for a new vehicle that are passed from ROI - just one new line for each vehicles
   is_vehicle_detected = [0]
   draw = ImageDraw.Draw(image)
   im_width, im_height = image.size
@@ -172,15 +170,12 @@ def draw_bounding_box_on_image(current_frame_number,image,
   draw.line([(left, top), (left, bottom), (right, bottom),
              (right, top), (left, top)], width=thickness, fill=color)
 
-  predicted_speed = "n.a." # means not available, it is just initialization
-  predicted_direction = "n.a." # means not available, it is just initialization
-
   image_temp = numpy.array(image)
   detected_vehicle_image = image_temp[int(top):int(bottom), int(left):int(right)]
 
   # if it pass the line
   if(bottom > ROI_POSITION): # if the vehicle pass ROI line, vehicle predicted_count it predicted_color algorithms are called - 200 is an arbitrary value, for my case it looks very well to set position of ROI line at y pixel 200
-        predicted_direction, predicted_speed,  is_vehicle_detected, update_csv = speed_prediction.predict_speed(top, bottom, right, left, current_frame_number, detected_vehicle_image, ROI_POSITION)
+        is_vehicle_detected = speed_prediction.predict_speed(top, bottom, right, left, current_frame_number, detected_vehicle_image, ROI_POSITION)
   predicted_color = color_recognition_api.color_recognition(detected_vehicle_image)
 
   try:
@@ -192,7 +187,6 @@ def draw_bounding_box_on_image(current_frame_number,image,
   # box exceeds the top of the image, stack the strings below the bounding box
   # instead of above.
   display_str_list[0] = predicted_color + " " + display_str_list[0]
-  csv_line = predicted_color + "," + str (predicted_direction) + "," + str(predicted_speed) # csv line created
   display_str_heights = [font.getsize(ds)[1] for ds in display_str_list]
 
   # Each display_str has a top and bottom margin of 0.05x.
@@ -217,7 +211,7 @@ def draw_bounding_box_on_image(current_frame_number,image,
         fill='black',
         font=font)
     text_bottom -= text_height - 2 * margin
-    return is_vehicle_detected, csv_line, update_csv
+    return is_vehicle_detected
 
 
 def draw_bounding_boxes_on_image_array(image,
@@ -455,7 +449,6 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
   """
   # Create a display string (and color) for every box location, group any boxes
   # that correspond to the same location.
-  csv_line_util = "not_available"
   counter = 0
   is_vehicle_detected = []
   density = [0, 0, 0]  # with bike,car,bus in this order
@@ -511,7 +504,7 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
     display_str_list = box_to_display_str_map[box]
     # we are interested just vehicles (i.e. cars and trucks)
     if (("car" in display_str_list[0]) or ("truck" in display_str_list[0]) or ("bus" in display_str_list[0]) or ("person" in display_str_list[0]) or ("bicycle" in display_str_list[0]) or ("motorcycle" in display_str_list[0])):
-            is_vehicle_detected, csv_line, update_csv = draw_bounding_box_on_image_array(current_frame_number,
+            is_vehicle_detected = draw_bounding_box_on_image_array(current_frame_number,
                 image,
                 ymin,
                 xmin,
@@ -537,9 +530,9 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
     is_vehicle_detected = []
     if(class_name == "boat"):
       class_name = "truck"
-    csv_line_util = class_name + "," + csv_line
 
-  return counter, csv_line_util, str1, density
+
+  return counter, str1, density
 
 
 def add_cdf_image_summary(values, name):
