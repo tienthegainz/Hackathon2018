@@ -18,6 +18,8 @@ import cv2
 import numpy as np
 import csv
 import time
+import requests
+import json
 
 from collections import defaultdict
 from io import StringIO
@@ -31,14 +33,15 @@ from utils import visualization_utils as vis_util
 
 # input video
 cap = cv2.VideoCapture('video_giao_thong.mp4')
-
+idee = 'PC1927'
 # Variables
 NUMBER_OF_FRAME = 300  # standard number frames before refreshing 5 min
 LINE_DEVIATION = 5
-
+ROAD_LENGTH = 12
 # By default I use an "SSD with Mobilenet" model here. See the detection model zoo (https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md) for a list of other models that can be run out-of-the-box with varying speeds and accuracies.
 # What model to download.
 MODEL_NAME = 'ssd_mobilenet_v1_coco_2017_11_17'
+# MODEL_NAME = 'faster_rcnn_resnet101_coco_2018_01_28'
 MODEL_FILE = MODEL_NAME + '.tar.gz'
 DOWNLOAD_BASE = \
     'http://download.tensorflow.org/models/object_detection/'
@@ -77,6 +80,22 @@ def load_image_into_numpy_array(image):
             3)).astype(np.uint8)
 
 
+# Sent 2 server
+def sentserver(ide, flow, den):
+    spd = flow/den
+    flow = str(flow)
+    den = str(den)
+    spd = str(spd)
+    data = {'ID': ide,
+            'trafic_flow': flow,
+            'traffic_density': den,
+            'speed': spd}
+    url = 'http://13.250.21.177/api/maytram'
+    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+    r = requests.post(url, data=json.dumps(data), headers=headers)
+    # r = requests.post(adr, json = data)
+    # print(data_json)
+
 # Detection
 def object_detection_function():
     # var init
@@ -87,9 +106,7 @@ def object_detection_function():
     density = [0, 0, 0]  # use it for density
     tmp_density = [0, 0, 0]  # to compare with density
 
-    size = 'waiting...'
-    color = 'waiting...'
-    obj_name = 'unknown...'
+    obj_name = []
     frame_count = 0
 
     with detection_graph.as_default():
@@ -123,10 +140,10 @@ def object_detection_function():
                 (boxes, scores, classes, num) = \
                     sess.run([detection_boxes, detection_scores,
                              detection_classes, num_detections],
-                             feed_dict={image_tensor: image_np_expanded})
-
+                             feed_dict={image_tensor: image_np_expanded}
+                             )
                 # Visualization of the results of a detection.
-                (counter, obj_name, density) = \
+                (obj_name, density) = \
                     vis_util.visualize_boxes_and_labels_on_image_array(
                     cap.get(1),
                     input_frame,
@@ -137,21 +154,22 @@ def object_detection_function():
                     use_normalized_coordinates=True,
                     line_thickness=4,
                     )
+                # print("cap.get: ", cap.get(1))
                 if (tmp_density[0]*0.3+tmp_density[1]+tmp_density[2]*2) > (density[0]*0.3+density[1]+density[2]*2):
                     density = tmp_density
                 tmp_density = [0, 0, 0]
                 frame_count += 1
-                if counter == 1:
-                    if "person" in obj_name or "bicycle" in obj_name or "motorcycle" in obj_name:
+                for obj in obj_name:
+                    if "person" in obj or "bicycle" in obj or "motorcycle" in obj:
                         total_passed_bike += 1
-                    elif "car" in obj_name:
+                    elif "car" in obj:
                         total_passed_car += 1
-                    elif "truck" in obj_name or "bus" in obj_name:
+                    elif "truck" in obj_name or "bus" in obj:
                         total_passed_bus += 1
                 if frame_count == NUMBER_OF_FRAME:
                     # cong thuc tinh travel flow
                     trf = (total_passed_bike*0.3+total_passed_car+total_passed_bus*2)*3600/(NUMBER_OF_FRAME/25)
-                    trd = (density[0]*0.3+density[1]+density[2]*2)*1000/50
+                    trd = (density[0]*0.3+density[1]+density[2]*2)*1000/ROAD_LENGTH
                     print("Bike: ", total_passed_bike)
                     print("Car: ", total_passed_car)
                     print("Truck and Bus: ", total_passed_bus)
@@ -162,9 +180,10 @@ def object_detection_function():
                     )
                     print("Traffic density: ",
                     trd,
-                    "vch/km (assuming that this is 50m video)")
+                    "vch/km")
                     print("Travel speed: ",trf/trd," km/h\n")
                     # HAY DAT FUNCTION GUI LEN SEVER VAO DAY !!!!!
+                    # sentserver(idee, trf,trd)
                     total_passed_bus = 0
                     total_passed_car = 0
                     total_passed_bike = 0
@@ -204,19 +223,17 @@ def object_detection_function():
                     cv2.FONT_HERSHEY_SIMPLEX,
                     )
                 # when the vehicle passed over line and counted, make the color of ROI line green
-                if counter == 1:
-                    cv2.line(input_frame, (0, 200), (3000, 200), (0, 0xFF, 0), 5)
-                else:
-                    cv2.line(input_frame, (0, 200), (3000, 200), (0, 0, 0xFF), 5)
+                cv2.line(input_frame, (0, 245), (3000, 245), (0, 0xFF, 0), 2)
+                cv2.line(input_frame, (0, 255), (3000, 255), (0, 0, 0xFF), 2)
 
                 # insert information text to video frame
                 cv2.putText(
                     input_frame,
-                    'ROI Line',
-                    (545, 290),
+                    'ROI',
+                    (545, 244),
                     font,
                     0.6,
-                    (0, 0, 0xFF),
+                    (0xFF, 0, 0),
                     2,
                     cv2.LINE_AA,
                     )

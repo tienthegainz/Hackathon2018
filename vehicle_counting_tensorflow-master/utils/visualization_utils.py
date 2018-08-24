@@ -37,7 +37,7 @@ from utils.color_recognition_module import color_recognition_api
 
 # Variables
 is_vehicle_detected = [0]
-ROI_POSITION = 200
+ROI_POSITION = 250
 
 _TITLE_LEFT_MARGIN = 10
 _TITLE_TOP_MARGIN = 10
@@ -449,13 +449,13 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
   """
   # Create a display string (and color) for every box location, group any boxes
   # that correspond to the same location.
-  counter = 0
   is_vehicle_detected = []
   density = [0, 0, 0]  # with bike,car,bus in this order
   box_to_display_str_map = collections.defaultdict(list)
   box_to_color_map = collections.defaultdict(str)
   box_to_instance_masks_map = {}
   box_to_keypoints_map = collections.defaultdict(list)
+  obj_name = []
   if not max_boxes_to_draw:
     max_boxes_to_draw = boxes.shape[0]
   for i in range(min(max_boxes_to_draw, boxes.shape[0])):
@@ -476,15 +476,8 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
           display_str = '{}: {}%'.format(class_name,int(100*scores[i]))
         else:
           display_str = 'score: {}%'.format(int(100 * scores[i]))
-
+        # print("display: ", display_str)
         box_to_display_str_map[box].append(display_str)
-        # print("Test: ", display_str)
-        if ("person" in display_str) or ("bicycle" in display_str) or("motorcycle" in display_str):
-            density[0] += 1
-        elif ("car" in display_str):
-            density[1] += 1
-        elif ("truck" in display_str) or ("bus" in display_str):
-            density[2] += 1
         if agnostic_mode:
           box_to_color_map[box] = 'DarkOrange'
         else:
@@ -502,6 +495,7 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
       )
 
     display_str_list = box_to_display_str_map[box]
+    # print("list: ", display_str_list, "type: ", type(display_str_list), "\n")
     # we are interested just vehicles (i.e. cars and trucks)
     if (("car" in display_str_list[0]) or ("truck" in display_str_list[0]) or ("bus" in display_str_list[0]) or ("person" in display_str_list[0]) or ("bicycle" in display_str_list[0]) or ("motorcycle" in display_str_list[0])):
             is_vehicle_detected = draw_bounding_box_on_image_array(current_frame_number,
@@ -514,8 +508,17 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
                 thickness=line_thickness,
                 display_str_list=box_to_display_str_map[box],
                 use_normalized_coordinates=use_normalized_coordinates)
-            str1, str2 = display_str_list[0].split(":")
-            # print("obj", str1)
+            if ("person" in display_str_list[0]) or ("bicycle" in display_str_list[0]) or("motorcycle" in display_str_list[0]):
+                density[0] += 1
+            elif ("car" in display_str_list[0]):
+                density[1] += 1
+            elif ("truck" in display_str_list[0]) or ("bus" in display_str_list[0]):
+                density[2] += 1
+            if(is_vehicle_detected == 1):
+                str1, str2 = display_str_list[0].split(":")
+                obj_name.append(str1)
+                is_vehicle_detected = 0
+                # print("obj", obj_name)
             if keypoints is not None:
               draw_keypoints_on_image_array(
                   image,
@@ -523,16 +526,9 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
                   color=color,
                   radius=line_thickness / 2,
                   use_normalized_coordinates=use_normalized_coordinates)
+            # print("detect", is_vehicle_detected, "type", type(is_vehicle_detected))
 
-  if(1 in is_vehicle_detected):
-    counter = 1
-    del is_vehicle_detected[:]
-    is_vehicle_detected = []
-    if(class_name == "boat"):
-      class_name = "truck"
-
-
-  return counter, str1, density
+  return obj_name, density
 
 
 def add_cdf_image_summary(values, name):
