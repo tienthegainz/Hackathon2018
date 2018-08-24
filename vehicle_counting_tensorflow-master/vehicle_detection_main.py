@@ -38,6 +38,14 @@ idee = 'PC1927'
 NUMBER_OF_FRAME = 300  # standard number frames before refreshing 5 min
 LINE_DEVIATION = 5
 ROAD_LENGTH = 12
+
+START = (180, 0)
+END =  (1400, 710)
+# math equation calculate
+a = (END[1]-START[1])/(END[0]-START[0])
+b = END[1]-END[0]*a
+print("a=", a, ", b=", b)
+
 # By default I use an "SSD with Mobilenet" model here. See the detection model zoo (https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md) for a list of other models that can be run out-of-the-box with varying speeds and accuracies.
 # What model to download.
 MODEL_NAME = 'ssd_mobilenet_v1_coco_2017_11_17'
@@ -72,7 +80,6 @@ categories = label_map_util.convert_label_map_to_categories(label_map,
         max_num_classes=NUM_CLASSES, use_display_name=True)
 category_index = label_map_util.create_category_index(categories)
 
-
 # Helper code
 def load_image_into_numpy_array(image):
     (im_width, im_height) = image.size
@@ -100,13 +107,14 @@ def sentserver(ide, flow, den):
 def object_detection_function():
     # var init
     # var for counting vehicle
-    total_passed_bus = 0  # using it to count bus and truck
-    total_passed_car = 0  # using it to count car
-    total_passed_bike = 0  # using it to count bike
-    density = [0, 0, 0]  # use it for density
-    tmp_density = [0, 0, 0]  # to compare with density
-
-    obj_name = []
+    total_passed_truck_right = 0
+    total_passed_car_right = 0
+    total_passed_bike_right = 0
+    total_passed_truck_left = 0
+    total_passed_car_left = 0
+    total_passed_bike_left = 0
+    density_left = 0
+    density_right = 0
     frame_count = 0
 
     with detection_graph.as_default():
@@ -143,10 +151,11 @@ def object_detection_function():
                              feed_dict={image_tensor: image_np_expanded}
                              )
                 # Visualization of the results of a detection.
-                (obj_name, density) = \
+                (density, flow) = \
                     vis_util.visualize_boxes_and_labels_on_image_array(
                     cap.get(1),
                     input_frame,
+                    a, b,
                     np.squeeze(boxes),
                     np.squeeze(classes).astype(np.int32),
                     np.squeeze(scores),
@@ -154,47 +163,56 @@ def object_detection_function():
                     use_normalized_coordinates=True,
                     line_thickness=4,
                     )
-                # print("cap.get: ", cap.get(1))
-                if (tmp_density[0]*0.3+tmp_density[1]+tmp_density[2]*2) > (density[0]*0.3+density[1]+density[2]*2):
-                    density = tmp_density
-                tmp_density = [0, 0, 0]
                 frame_count += 1
-                for obj in obj_name:
-                    if "person" in obj or "bicycle" in obj or "motorcycle" in obj:
-                        total_passed_bike += 1
-                    elif "car" in obj:
-                        total_passed_car += 1
-                    elif "truck" in obj_name or "bus" in obj:
-                        total_passed_bus += 1
+
+                total_passed_truck_right += flow['truck']['right']
+                total_passed_car_right += flow['car']['right']
+                total_passed_bike_right += flow['bike']['right']
+                total_passed_truck_left += flow['truck']['left']
+                total_passed_car_left += flow['car']['left']
+                total_passed_bike_left += flow['bike']['left']
+                if (density['bike']['right']*0.3+density['car']['right']+density['truck']['right']*2)*1000/12 > density_right:
+                    density_right = (density['bike']['right']*0.3+density['car']['right']+density['truck']['right']*2)*1000/12
+                if (density['bike']['left']*0.3+density['car']['left']+density['truck']['left']*2)*1000/12 > density_left:
+                    density_left = (density['bike']['left']*0.3+density['car']['left']+density['truck']['left']*2)*1000/12
                 if frame_count == NUMBER_OF_FRAME:
                     # cong thuc tinh travel flow
-                    trf = (total_passed_bike*0.3+total_passed_car+total_passed_bus*2)*3600/(NUMBER_OF_FRAME/25)
-                    trd = (density[0]*0.3+density[1]+density[2]*2)*1000/ROAD_LENGTH
-                    print("Bike: ", total_passed_bike)
-                    print("Car: ", total_passed_car)
-                    print("Truck and Bus: ", total_passed_bus)
+                    trf_left = (total_passed_bike_left*0.3+total_passed_car_left+total_passed_truck_left*2)*3600/(NUMBER_OF_FRAME/25)
+                    trf_right = (total_passed_bike_right*0.3+total_passed_car_right+total_passed_truck_right*2)*3600/(NUMBER_OF_FRAME/25)
+                    print("Bike right: ", total_passed_bike_right)
+                    print("Car right: ", total_passed_car_right)
+                    print("Truck and Bus right: ", total_passed_truck_right)
+                    print("Bike left: ", total_passed_bike_left)
+                    print("Car left: ", total_passed_car_left)
+                    print("Truck and Bus left: ", total_passed_truck_left)
                     print(
-                    "Traffic Flow: ",
-                    trf,
+                    "Traffic Flow left: ",
+                    trf_left,
+                    "Traffic Flow right: ",
+                    trf_right,
                     "vch/h"
                     )
-                    print("Traffic density: ",
-                    trd,
+                    print("Traffic density left: ",
+                    density_left,
+                    "Traffic density right: ",
+                    density_right,
                     "vch/km")
-                    print("Travel speed: ",trf/trd," km/h\n")
                     # HAY DAT FUNCTION GUI LEN SEVER VAO DAY !!!!!
                     # sentserver(idee, trf,trd)
-                    total_passed_bus = 0
-                    total_passed_car = 0
-                    total_passed_bike = 0
+                    total_passed_truck_right = 0
+                    total_passed_car_right = 0
+                    total_passed_bike_right = 0
+                    total_passed_truck_left = 0
+                    total_passed_car_left = 0
+                    total_passed_bike_left = 0
+                    density_left = 0
+                    density_right = 0
                     frame_count = 0
-                    density = [0, 0, 0]
-
                 # insert information text to video frame
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 cv2.putText(
                     input_frame,
-                    'Detected Car: ' + str(total_passed_car),
+                    'Car left: ' + str(total_passed_car_left) + ' right: ' + str(total_passed_car_right),
                     (10, 35),
                     font,
                     0.8,
@@ -204,7 +222,7 @@ def object_detection_function():
                     )
                 cv2.putText(
                     input_frame,
-                    'Detected Bike: ' + str(total_passed_bike),
+                    'Bike left: ' + str(total_passed_bike_left) + ' right: ' + str(total_passed_bike_right),
                     (10, 55),
                     font,
                     0.8,
@@ -214,7 +232,7 @@ def object_detection_function():
                     )
                 cv2.putText(
                     input_frame,
-                    'Detected Truck or Bus: ' + str(total_passed_bus),
+                    'Truck or Bus: ' + str(total_passed_truck_left) + ' right: ' + str(total_passed_truck_right),
                     (10, 75),
                     font,
                     0.8,
@@ -225,7 +243,7 @@ def object_detection_function():
                 # when the vehicle passed over line and counted, make the color of ROI line green
                 cv2.line(input_frame, (0, 248), (3000, 248), (0, 0xFF, 0), 2)
                 cv2.line(input_frame, (0, 252), (3000, 252), (0, 0, 0xFF), 2)
-
+                cv2.line(input_frame, START, END, (0, 0xFF, 0), 2)
                 # insert information text to video frame
                 cv2.putText(
                     input_frame,

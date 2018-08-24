@@ -122,11 +122,11 @@ def draw_bounding_box_on_image_array(current_frame_number, image,
       coordinates as absolute.
   """
   image_pil = Image.fromarray(np.uint8(image)).convert('RGB')
-  is_vehicle_detected = draw_bounding_box_on_image(current_frame_number,image_pil, ymin, xmin, ymax, xmax, color,
+  (is_vehicle_detected,position) = draw_bounding_box_on_image(current_frame_number,image_pil, ymin, xmin, ymax, xmax, color,
                              thickness, display_str_list,
                              use_normalized_coordinates)
   np.copyto(image, np.array(image_pil))
-  return is_vehicle_detected
+  return is_vehicle_detected,position
 
 def draw_bounding_box_on_image(current_frame_number,image,
                                ymin,
@@ -168,14 +168,17 @@ def draw_bounding_box_on_image(current_frame_number,image,
     (left, right, top, bottom) = (xmin, xmax, ymin, ymax)
   draw.line([(left, top), (left, bottom), (right, bottom),
              (right, top), (left, top)], width=thickness, fill=color)
+  position = ((left+right)/2, (top+bottom)/2)
 
   image_temp = numpy.array(image)
   detected_vehicle_image = image_temp[int(top):int(bottom), int(left):int(right)]
 
   # if it pass the line
   # if the vehicle pass ROI line, vehicle predicted_count it predicted_color algorithms are called - 200 is an arbitrary value, for my case it looks very well to set position of ROI line at y pixel 200
-  is_vehicle_detected = speed_prediction.predict_speed(top, bottom, right, left, current_frame_number, detected_vehicle_image, ROI_POSITION)
   predicted_color = color_recognition_api.color_recognition(detected_vehicle_image)  # mau sac cua obj
+  # if(predicted_color == 'green'):
+#      print("pos: ",position," val: ", position[0]*0.4+180-position[1])
+  is_vehicle_detected = speed_prediction.predict_speed(top, bottom, right, left, predicted_color, current_frame_number, detected_vehicle_image, ROI_POSITION)
   try:
     font = ImageFont.truetype('arial.ttf', 16)
   except IOError:
@@ -209,7 +212,7 @@ def draw_bounding_box_on_image(current_frame_number,image,
         fill='black',
         font=font)
     text_bottom -= text_height - 2 * margin
-    return is_vehicle_detected
+    return is_vehicle_detected, position
 
 
 def draw_bounding_boxes_on_image_array(image,
@@ -400,6 +403,7 @@ def draw_mask_on_image_array(image, mask, color='red', alpha=0.7):
 
 
 def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
+                                              a, b,
                                               boxes,
                                               classes,
                                               scores,
@@ -420,6 +424,7 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
 
   Args:
     image: uint8 numpy array with shape (img_height, img_width, 3)
+    a,b: math caculation
     boxes: a numpy array of shape [N, 4]
     classes: a numpy array of shape [N]. Note that class indices are 1-based,
       and match the keys in the label map.
@@ -448,12 +453,12 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
   # Create a display string (and color) for every box location, group any boxes
   # that correspond to the same location.
   is_vehicle_detected = []
-  density = [0, 0, 0]  # with bike,car,bus in this order
+  obj_density = {'bike':{'right':0,'left':0}, 'car':{'right':0,'left':0}, 'truck':{'right':0,'left':0}}
+  obj_flow = {'bike':{'right':0,'left':0}, 'car':{'right':0,'left':0}, 'truck':{'right':0,'left':0}}
   box_to_display_str_map = collections.defaultdict(list)
   box_to_color_map = collections.defaultdict(str)
   box_to_instance_masks_map = {}
   box_to_keypoints_map = collections.defaultdict(list)
-  obj_name = []
   if not max_boxes_to_draw:
     max_boxes_to_draw = boxes.shape[0]
   for i in range(min(max_boxes_to_draw, boxes.shape[0])):
@@ -495,7 +500,8 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
     # print("list: ", display_str_list, "type: ", type(display_str_list), "\n")
     # we are interested just vehicles (i.e. cars and trucks)
     if (("car" in display_str_list[0]) or ("truck" in display_str_list[0]) or ("bus" in display_str_list[0]) or ("person" in display_str_list[0]) or ("bicycle" in display_str_list[0]) or ("motorcycle" in display_str_list[0])):
-            is_vehicle_detected = draw_bounding_box_on_image_array(current_frame_number,
+            # print(display_str_list[0])
+            (is_vehicle_detected, position) = draw_bounding_box_on_image_array(current_frame_number,
                 image,
                 ymin,
                 xmin,
@@ -505,17 +511,36 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
                 thickness=line_thickness,
                 display_str_list=box_to_display_str_map[box],
                 use_normalized_coordinates=use_normalized_coordinates)
+            # print("position: ", position)
             if ("person" in display_str_list[0]) or ("bicycle" in display_str_list[0]) or("motorcycle" in display_str_list[0]):
-                density[0] += 1
+                if(position[0]*a+b) <= position[1]:
+                    obj_density['bike']['left'] += 1
+                    if(is_vehicle_detected == 1):
+                        obj_flow['bike']['left'] += 1
+                elif(position[0]*a+b) > position[1]:
+                    obj_density['bike']['right'] += 1
+                    if(is_vehicle_detected == 1):
+                        obj_flow['bike']['right'] += 1
             elif ("car" in display_str_list[0]):
-                density[1] += 1
+                if(position[0]*a+b) <= position[1]:
+                    obj_density['car']['left'] += 1
+                    if(is_vehicle_detected == 1):
+                        obj_flow['car']['left'] += 1
+                elif(position[0]*a+b) > position[1]:
+                    obj_density['car']['right'] += 1
+                    if(is_vehicle_detected == 1):
+                        obj_flow['car']['right'] += 1
             elif ("truck" in display_str_list[0]) or ("bus" in display_str_list[0]):
-                density[2] += 1
-            if(is_vehicle_detected == 1):
-                str1, str2 = display_str_list[0].split(":")
-                obj_name.append(str1)
-                is_vehicle_detected = 0
-                # print("obj", obj_name)
+                if(position[0]*a+b) <= position[1]:
+                    # print("Truck: ", position)
+                    obj_density['truck']['left'] += 1
+                    if(is_vehicle_detected == 1):
+                        # print("position: ", position)
+                        obj_flow['truck']['left'] += 1
+                elif(position[0]*a+b) > position[1]:
+                    obj_density['truck']['right'] += 1
+                    if(is_vehicle_detected == 1):
+                        obj_flow['truck']['right'] += 1
             if keypoints is not None:
               draw_keypoints_on_image_array(
                   image,
@@ -524,8 +549,9 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
                   radius=line_thickness / 2,
                   use_normalized_coordinates=use_normalized_coordinates)
             # print("detect", is_vehicle_detected, "type", type(is_vehicle_detected))
-
-  return obj_name, density
+  # print("Density: ", obj_density)
+  # print("Add flow: ", obj_flow)
+  return obj_density, obj_flow
 
 
 def add_cdf_image_summary(values, name):

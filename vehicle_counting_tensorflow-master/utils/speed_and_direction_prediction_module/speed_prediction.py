@@ -8,14 +8,15 @@
 from utils.image_utils import image_saver
 
 # current_frame_number_list = [0]
-
-LINE_DEVIATION = 4
+NUMBER_OF_FRAME = 300  # standard number frames before refreshing 5 min
+LINE_DEVIATION = 5
 VCH_DEVIATION = 5
 def predict_speed(
     top,
     bottom,
     right,
     left,
+    color,
     current_frame_number,
     crop_img,
     roi_position,
@@ -23,11 +24,8 @@ def predict_speed(
     center_pos = (top+bottom)/2
     is_vehicle_detected = 0
     # print(center_pos)
-    if center_pos >= (roi_position - LINE_DEVIATION) \
-        and center_pos <= (roi_position + LINE_DEVIATION) \
-        and current_frame_number % 2 == 0:
+    if center_pos >= (roi_position - LINE_DEVIATION) and center_pos <= (roi_position + LINE_DEVIATION) and current_frame_number % 2 == 0:
             is_vehicle_detected = 1
-            # print("Confirm")
             image_saver.save_image(crop_img)  # save detected vehicle image
 
     return (is_vehicle_detected)
