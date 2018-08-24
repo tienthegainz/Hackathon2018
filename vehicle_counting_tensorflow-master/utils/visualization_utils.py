@@ -36,7 +36,6 @@ from utils.speed_and_direction_prediction_module import speed_prediction
 from utils.color_recognition_module import color_recognition_api
 
 # Variables
-is_vehicle_detected = [0]
 ROI_POSITION = 250
 
 _TITLE_LEFT_MARGIN = 10
@@ -159,7 +158,7 @@ def draw_bounding_box_on_image(current_frame_number,image,
       ymin, xmin, ymax, xmax as relative to the image.  Otherwise treat
       coordinates as absolute.
   """
-  is_vehicle_detected = [0]
+  is_vehicle_detected = 0
   draw = ImageDraw.Draw(image)
   im_width, im_height = image.size
   if use_normalized_coordinates:
@@ -174,10 +173,9 @@ def draw_bounding_box_on_image(current_frame_number,image,
   detected_vehicle_image = image_temp[int(top):int(bottom), int(left):int(right)]
 
   # if it pass the line
-  if(bottom > ROI_POSITION): # if the vehicle pass ROI line, vehicle predicted_count it predicted_color algorithms are called - 200 is an arbitrary value, for my case it looks very well to set position of ROI line at y pixel 200
-        is_vehicle_detected = speed_prediction.predict_speed(top, bottom, right, left, current_frame_number, detected_vehicle_image, ROI_POSITION)
-  predicted_color = color_recognition_api.color_recognition(detected_vehicle_image)
-
+  # if the vehicle pass ROI line, vehicle predicted_count it predicted_color algorithms are called - 200 is an arbitrary value, for my case it looks very well to set position of ROI line at y pixel 200
+  is_vehicle_detected = speed_prediction.predict_speed(top, bottom, right, left, current_frame_number, detected_vehicle_image, ROI_POSITION)
+  predicted_color = color_recognition_api.color_recognition(detected_vehicle_image)  # mau sac cua obj
   try:
     font = ImageFont.truetype('arial.ttf', 16)
   except IOError:
@@ -493,7 +491,6 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
           box_to_instance_masks_map[box],
           color=color
       )
-
     display_str_list = box_to_display_str_map[box]
     # print("list: ", display_str_list, "type: ", type(display_str_list), "\n")
     # we are interested just vehicles (i.e. cars and trucks)

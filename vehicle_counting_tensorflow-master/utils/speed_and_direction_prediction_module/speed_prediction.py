@@ -9,7 +9,7 @@ from utils.image_utils import image_saver
 
 # current_frame_number_list = [0]
 
-LINE_DEVIATION = 5
+LINE_DEVIATION = 4
 VCH_DEVIATION = 5
 def predict_speed(
     top,

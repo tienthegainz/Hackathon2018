@@ -223,8 +223,8 @@ def object_detection_function():
                     cv2.FONT_HERSHEY_SIMPLEX,
                     )
                 # when the vehicle passed over line and counted, make the color of ROI line green
-                cv2.line(input_frame, (0, 245), (3000, 245), (0, 0xFF, 0), 2)
-                cv2.line(input_frame, (0, 255), (3000, 255), (0, 0, 0xFF), 2)
+                cv2.line(input_frame, (0, 248), (3000, 248), (0, 0xFF, 0), 2)
+                cv2.line(input_frame, (0, 252), (3000, 252), (0, 0, 0xFF), 2)
 
                 # insert information text to video frame
                 cv2.putText(
