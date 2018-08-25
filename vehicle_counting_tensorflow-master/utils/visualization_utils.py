@@ -97,6 +97,7 @@ def encode_image_array_as_png_str(image):
   return png_string
 
 def draw_bounding_box_on_image_array(current_frame_number, image,
+                                     obj_name,
                                      ymin,
                                      xmin,
                                      ymax,
@@ -122,13 +123,14 @@ def draw_bounding_box_on_image_array(current_frame_number, image,
       coordinates as absolute.
   """
   image_pil = Image.fromarray(np.uint8(image)).convert('RGB')
-  (is_vehicle_detected,position) = draw_bounding_box_on_image(current_frame_number,image_pil, ymin, xmin, ymax, xmax, color,
+  (is_vehicle_detected,position) = draw_bounding_box_on_image(current_frame_number,image_pil,obj_name, ymin, xmin, ymax, xmax, color,
                              thickness, display_str_list,
                              use_normalized_coordinates)
   np.copyto(image, np.array(image_pil))
   return is_vehicle_detected,position
 
 def draw_bounding_box_on_image(current_frame_number,image,
+                               obj_name,
                                ymin,
                                xmin,
                                ymax,
@@ -176,9 +178,8 @@ def draw_bounding_box_on_image(current_frame_number,image,
   # if it pass the line
   # if the vehicle pass ROI line, vehicle predicted_count it predicted_color algorithms are called - 200 is an arbitrary value, for my case it looks very well to set position of ROI line at y pixel 200
   predicted_color = color_recognition_api.color_recognition(detected_vehicle_image)  # mau sac cua obj
-  # if(predicted_color == 'green'):
-#      print("pos: ",position," val: ", position[0]*0.4+180-position[1])
-  is_vehicle_detected = speed_prediction.predict_speed(top, bottom, right, left, predicted_color, current_frame_number, detected_vehicle_image, ROI_POSITION)
+  obj_name = obj_name + '_' + obj_name
+  is_vehicle_detected = speed_prediction.predict_speed(position,left, right, top, bottom, obj_name, predicted_color, current_frame_number, detected_vehicle_image, ROI_POSITION)
   try:
     font = ImageFont.truetype('arial.ttf', 16)
   except IOError:
@@ -500,9 +501,10 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
     # print("list: ", display_str_list, "type: ", type(display_str_list), "\n")
     # we are interested just vehicles (i.e. cars and trucks)
     if (("car" in display_str_list[0]) or ("truck" in display_str_list[0]) or ("bus" in display_str_list[0]) or ("person" in display_str_list[0]) or ("bicycle" in display_str_list[0]) or ("motorcycle" in display_str_list[0])):
-            # print(display_str_list[0])
+            obj_name, str1 = display_str_list[0].split(':')
             (is_vehicle_detected, position) = draw_bounding_box_on_image_array(current_frame_number,
                 image,
+                obj_name,
                 ymin,
                 xmin,
                 ymax,
