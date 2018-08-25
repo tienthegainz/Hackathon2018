@@ -96,7 +96,7 @@ def encode_image_array_as_png_str(image):
   output.close()
   return png_string
 
-def draw_bounding_box_on_image_array(current_frame_number, image,
+def draw_bounding_box_on_image_array(current_frame_number, vch_dict, image,
                                      obj_name,
                                      ymin,
                                      xmin,
@@ -123,13 +123,13 @@ def draw_bounding_box_on_image_array(current_frame_number, image,
       coordinates as absolute.
   """
   image_pil = Image.fromarray(np.uint8(image)).convert('RGB')
-  (is_vehicle_detected,position) = draw_bounding_box_on_image(current_frame_number,image_pil,obj_name, ymin, xmin, ymax, xmax, color,
+  (is_vehicle_detected,position, vch_dict) = draw_bounding_box_on_image(current_frame_number, vch_dict,image_pil,obj_name, ymin, xmin, ymax, xmax, color,
                              thickness, display_str_list,
                              use_normalized_coordinates)
   np.copyto(image, np.array(image_pil))
-  return is_vehicle_detected,position
+  return is_vehicle_detected, position, vch_dict
 
-def draw_bounding_box_on_image(current_frame_number,image,
+def draw_bounding_box_on_image(current_frame_number,vch_dict,image,
                                obj_name,
                                ymin,
                                xmin,
@@ -160,7 +160,6 @@ def draw_bounding_box_on_image(current_frame_number,image,
       ymin, xmin, ymax, xmax as relative to the image.  Otherwise treat
       coordinates as absolute.
   """
-  is_vehicle_detected = 0
   draw = ImageDraw.Draw(image)
   im_width, im_height = image.size
   if use_normalized_coordinates:
@@ -178,8 +177,8 @@ def draw_bounding_box_on_image(current_frame_number,image,
   # if it pass the line
   # if the vehicle pass ROI line, vehicle predicted_count it predicted_color algorithms are called - 200 is an arbitrary value, for my case it looks very well to set position of ROI line at y pixel 200
   predicted_color = color_recognition_api.color_recognition(detected_vehicle_image)  # mau sac cua obj
-  obj_name = obj_name + '_' + obj_name
-  is_vehicle_detected = speed_prediction.predict_speed(position,left, right, top, bottom, obj_name, predicted_color, current_frame_number, detected_vehicle_image, ROI_POSITION)
+  obj_name = obj_name + '_' + predicted_color
+  is_vehicle_detected, vch_dict = speed_prediction.predict_speed(vch_dict, position, left, right, top, bottom, obj_name, predicted_color, current_frame_number, detected_vehicle_image, ROI_POSITION)
   try:
     font = ImageFont.truetype('arial.ttf', 16)
   except IOError:
@@ -213,7 +212,7 @@ def draw_bounding_box_on_image(current_frame_number,image,
         fill='black',
         font=font)
     text_bottom -= text_height - 2 * margin
-    return is_vehicle_detected, position
+    return is_vehicle_detected, position, vch_dict
 
 
 def draw_bounding_boxes_on_image_array(image,
@@ -403,7 +402,9 @@ def draw_mask_on_image_array(image, mask, color='red', alpha=0.7):
   np.copyto(image, np.array(pil_image.convert('RGB')))
 
 
-def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
+def visualize_boxes_and_labels_on_image_array(current_frame_number,
+                                              vch_dict,
+                                              image,
                                               a, b,
                                               boxes,
                                               classes,
@@ -502,8 +503,8 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
     # we are interested just vehicles (i.e. cars and trucks)
     if (("car" in display_str_list[0]) or ("truck" in display_str_list[0]) or ("bus" in display_str_list[0]) or ("person" in display_str_list[0]) or ("bicycle" in display_str_list[0]) or ("motorcycle" in display_str_list[0])):
             obj_name, str1 = display_str_list[0].split(':')
-            (is_vehicle_detected, position) = draw_bounding_box_on_image_array(current_frame_number,
-                image,
+            (is_vehicle_detected, position, vch_dict) = draw_bounding_box_on_image_array(current_frame_number,
+                vch_dict, image,
                 obj_name,
                 ymin,
                 xmin,
@@ -553,7 +554,7 @@ def visualize_boxes_and_labels_on_image_array(current_frame_number,image,
             # print("detect", is_vehicle_detected, "type", type(is_vehicle_detected))
   # print("Density: ", obj_density)
   # print("Add flow: ", obj_flow)
-  return obj_density, obj_flow
+  return obj_density, obj_flow, vch_dict
 
 
 def add_cdf_image_summary(values, name):

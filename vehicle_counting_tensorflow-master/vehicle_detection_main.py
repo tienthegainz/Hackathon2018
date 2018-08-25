@@ -33,11 +33,11 @@ from utils import visualization_utils as vis_util
 
 # input video
 cap = cv2.VideoCapture('video_giao_thong.mp4')
-idee = 'PC1927'
+idee = 1
 # Variables
 NUMBER_OF_FRAME = 300  # standard number frames before refreshing 12s
 LINE_DEVIATION = 5
-ROAD_LENGTH = 12
+ROAD_AREA = 12
 
 START = (180, 0)
 END =  (1400, 710)
@@ -88,20 +88,22 @@ def load_image_into_numpy_array(image):
 
 
 # Sent 2 server
-def sentserver(ide, flow, den):
-    spd = flow/den
-    flow = str(flow)
-    den = str(den)
-    spd = str(spd)
+def sentserver(ide , flow_r, flow_l, den_r, den_l):
+    spd_r = flow_r/den_r
+    spd_l = flow_l/den_l
+
     data = {'ID': ide,
-            'trafic_flow': flow,
-            'traffic_density': den,
-            'speed': spd}
+            'trafic_flow_right': flow_r,
+            'traffic_density_right': den_r,
+            'speed_right': spd_r,
+            'trafic_flow_left': flow_l,
+            'traffic_density_left': den_l,
+            'speed_left': spd_l
+            }
     url = 'http://13.250.21.177/api/maytram'
     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
     r = requests.post(url, data=json.dumps(data), headers=headers)
-    # r = requests.post(adr, json = data)
-    # print(data_json)
+
 
 # Detection
 def object_detection_function():
@@ -116,7 +118,7 @@ def object_detection_function():
     density_left = 0
     density_right = 0
     frame_count = 0
-
+    vch_dict = {}
     with detection_graph.as_default():
         with tf.Session(graph=detection_graph) as sess:
 
@@ -151,9 +153,10 @@ def object_detection_function():
                              feed_dict={image_tensor: image_np_expanded}
                              )
                 # Visualization of the results of a detection.
-                (density, flow) = \
+                (density, flow, vch_dict) = \
                     vis_util.visualize_boxes_and_labels_on_image_array(
                     cap.get(1),
+                    vch_dict,
                     input_frame,
                     a, b,
                     np.squeeze(boxes),
@@ -171,10 +174,10 @@ def object_detection_function():
                 total_passed_truck_left += flow['truck']['left']
                 total_passed_car_left += flow['car']['left']
                 total_passed_bike_left += flow['bike']['left']
-                if (density['bike']['right']*0.3+density['car']['right']+density['truck']['right']*2)*1000/12 > density_right:
-                    density_right = (density['bike']['right']*0.3+density['car']['right']+density['truck']['right']*2)*1000/12
-                if (density['bike']['left']*0.3+density['car']['left']+density['truck']['left']*2)*1000/12 > density_left:
-                    density_left = (density['bike']['left']*0.3+density['car']['left']+density['truck']['left']*2)*1000/12
+                if (density['bike']['right']*0.3+density['car']['right']+density['truck']['right']*2)/ROAD_AREA > density_right:
+                    density_right = (density['bike']['right']*0.3+density['car']['right']+density['truck']['right']*2)*1000/ROAD_AREA
+                if (density['bike']['left']*0.3+density['car']['left']+density['truck']['left']*2)/ROAD_AREA > density_left:
+                    density_left = (density['bike']['left']*0.3+density['car']['left']+density['truck']['left']*2)*1000/ROAD_AREA
                 if frame_count == NUMBER_OF_FRAME:
                     # cong thuc tinh travel flow
                     trf_left = (total_passed_bike_left*0.3+total_passed_car_left+total_passed_truck_left*2)*3600/(NUMBER_OF_FRAME/25)
@@ -190,15 +193,20 @@ def object_detection_function():
                     trf_left,
                     "Traffic Flow right: ",
                     trf_right,
-                    "vch/h"
+                    "vch/h",
                     )
                     print("Traffic density left: ",
                     density_left,
                     "Traffic density right: ",
                     density_right,
                     "vch/km")
+                    print("Traffic speed left: ",
+                    trf_left/density_left,
+                    "Traffic speed right: ",
+                    trf_right/density_right,
+                    "km/h")
                     # HAY DAT FUNCTION GUI LEN SEVER VAO DAY !!!!!
-                    # sentserver(idee, trf,trd)
+                    sentserver(idee, trf_right, trf_left, density_right, density_left)
                     total_passed_truck_right = 0
                     total_passed_car_right = 0
                     total_passed_bike_right = 0
