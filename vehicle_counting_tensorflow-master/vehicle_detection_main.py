@@ -35,7 +35,7 @@ from utils import visualization_utils as vis_util
 cap = cv2.VideoCapture('video_giao_thong.mp4')
 idee = 'PC1927'
 # Variables
-NUMBER_OF_FRAME = 300  # standard number frames before refreshing 5 min
+NUMBER_OF_FRAME = 300  # standard number frames before refreshing 12s
 LINE_DEVIATION = 5
 ROAD_LENGTH = 12
 
